@@ -7,13 +7,16 @@
     "test": "playwright test",
     "test:headed": "playwright test --headed",
     "test:debug": "playwright test --debug",
-    "report": "playwright show-report"
+    "report": "playwright show-report",
+    "test:jest": "jest jest-tests"
   },
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "@playwright/test": "^1.42.1",
-    "playwright": "^1.42.1",
+    "@playwright/test": "^1.53.1",
+    "@types/node": "^24.0.3",
+    "jest": "^30.0.2",
+    "playwright": "^1.53.1",
     "puppeteer": "^19.7.0"
   }
 }

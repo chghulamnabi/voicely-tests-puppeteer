@@ -3,10 +3,11 @@ const path = require('path');
 const fs = require('fs');
 const https = require('https');
 const os = require('os');
+const { test, expect } = require('@playwright/test');
 
-jest.setTimeout(300000);
+test.setTimeout(300000);
 
-describe('Voicely Extension Integration Test', () => {
+test.describe('Voicely Extension Integration Test', () => {
   let browser;
   let page;
   let server;
@@ -31,7 +32,7 @@ describe('Voicely Extension Integration Test', () => {
     }
   }
 
-  beforeAll(async () => {
+  test.beforeAll(async () => {
     // Ensure screenshots directory exists
     if (!fs.existsSync(screenshotsDir)) {
       fs.mkdirSync(screenshotsDir, { recursive: true });
@@ -156,7 +157,7 @@ describe('Voicely Extension Integration Test', () => {
     }
   });
 
-  afterAll(async () => {
+  test.afterAll(async () => {
     try {
       if (browser) {
         await browser.close();
