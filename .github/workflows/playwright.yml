@@ -17,6 +17,8 @@ jobs:
       run: npm install
     - name: Install Playwright Browsers and dependencies
       run: npx playwright install --with-deps
+    - name: Force Puppeteer browser download
+      run: npx puppeteer browsers install chrome
     - name: Run Voicely E2E tests
       run: npx playwright test e2e/voicely.spec.js
     - uses: actions/upload-artifact@v4
