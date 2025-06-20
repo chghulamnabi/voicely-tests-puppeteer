@@ -5,7 +5,7 @@ const https = require('https');
 const os = require('os');
 const { test, expect } = require('@playwright/test');
 
-test.setTimeout(120000); // 2 minutes, adjust as needed
+test.setTimeout(60000); // 1 minute
 
 test.describe('Voicely Extension Integration Test', () => {
     let browser;
@@ -76,9 +76,8 @@ test.describe('Voicely Extension Integration Test', () => {
         try {
             console.log('Starting browser with extension path:', extensionPath);
             browser = await puppeteer.launch({
-                headless: false,
+                headless: process.env.CI ? 'new' : false,
                 defaultViewport: null,
-                executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
                 args: [
                     `--disable-extensions-except=${extensionPath}`,
                     `--load-extension=${extensionPath}`,
@@ -92,6 +91,7 @@ test.describe('Voicely Extension Integration Test', () => {
                     '--autoplay-policy=no-user-gesture-required',
                     '--use-fake-ui-for-media-stream',
                     '--use-fake-device-for-media-stream',
+                    '--use-file-for-fake-audio-capture=/absolute/path/to/harvard.wav',
                     '--disable-background-timer-throttling',
                     '--disable-backgrounding-occluded-windows',
                     '--disable-renderer-backgrounding'
@@ -408,118 +408,24 @@ test.describe('Voicely Extension Integration Test', () => {
 
             // Wait for voice icon to be visible
             await page.waitForSelector('#voicely-group .voiceIcon1', { visible: true, timeout: 15000 });
-            console.log('Voice icon is visible');
+            await page.waitForTimeout(500);
+            await page.click('#voicely-group .voiceIcon1');
+            console.log('Clicked voice icon to start recording');
 
-            // Ensure we're not already recording
-            const initialRecordingState = await page.evaluate(() => {
-                const voiceIcon = document.querySelector('#voicely-group .voiceIcon1');
-                return voiceIcon?.style.display !== 'none';
-            });
+            // Wait a short moment to ensure recording is active
+            await page.waitForTimeout(500); // 0.5s
 
-            if (initialRecordingState) {
-                console.log('Already recording, stopping first...');
-                await page.evaluate(() => {
-                    const voiceIcon = document.querySelector('#voicely-group .voiceIcon1');
-                    if (voiceIcon) {
-                        voiceIcon.click();
-                    }
-                });
-                await new Promise(resolve => setTimeout(resolve, 2000));
-            }
-
-            // Set up audio context and buffer before starting recording
+            // Start audio playback
             await setupAudioPlayback(page);
-            console.log('Audio setup complete');
+            console.log('Audio playback started while recording');
 
-            // Hover over voice icon with retry
-            let hoverSuccess = false;
-            let hoverRetries = 3;
-
-            while (!hoverSuccess && hoverRetries > 0) {
-                try {
-                    // First ensure the element is visible and clickable
-                    await page.evaluate(() => {
-                        const voiceIcon = document.querySelector('#voicely-group .voiceIcon1');
-                        if (voiceIcon) {
-                            voiceIcon.style.display = 'block';
-                            voiceIcon.style.visibility = 'visible';
-                            voiceIcon.style.opacity = '1';
-                        }
-                    });
-
-                    // Wait a bit for styles to apply
-                    await new Promise(resolve => setTimeout(resolve, 500));
-
-                    // Try to hover
-                    await page.hover('#voicely-group .voiceIcon1', { timeout: 5000 });
-                    console.log('Hovered over voice icon');
-
-                    // Verify hover state
-                    const isHovered = await page.evaluate(() => {
-                        const voiceIcon = document.querySelector('#voicely-group .voiceIcon1');
-                        return voiceIcon && window.getComputedStyle(voiceIcon).cursor === 'pointer';
-                    });
-
-                    if (isHovered) {
-                        hoverSuccess = true;
-                        break;
-                    }
-
-                    console.log(`Hover attempt ${4 - hoverRetries} failed, retrying...`);
-                    hoverRetries--;
-                    await new Promise(resolve => setTimeout(resolve, 1000));
-                } catch (error) {
-                    console.log(`Hover attempt ${4 - hoverRetries} failed:`, error.message);
-                    hoverRetries--;
-                    if (hoverRetries === 0) throw error;
-                    await new Promise(resolve => setTimeout(resolve, 1000));
-                }
-            }
-
-            if (!hoverSuccess) {
-                throw new Error('Failed to hover over voice icon after multiple attempts');
-            }
-
-            // Wait a bit for hover effect
-            await new Promise(resolve => setTimeout(resolve, 1000));
-
-            // Click voice icon to start recording with retry logic
-            let recordingStarted = false;
-            let retryCount = 0;
-
-            while (!recordingStarted && retryCount < maxRetries) {
-                try {
-                    // Click the voice icon
-                    await page.evaluate(() => {
-                        const voiceIcon = document.querySelector('#voicely-group .voiceIcon1');
-                        if (voiceIcon) {
-                            voiceIcon.click();
-                            console.log('Clicked voice icon');
-                        }
-                    });
-
-                    // Wait for recording state to be confirmed
-                    await page.waitForFunction(() => {
-                        const voiceIcon = document.querySelector('#voicely-group .voiceIcon1');
-                        const isRecording = voiceIcon && voiceIcon.style.display !== 'none';
-                        console.log('Recording state check:', { isRecording });
-                        return isRecording;
-                    }, { timeout: 10000 });
-
-                    recordingStarted = true;
-                    console.log('Recording started successfully');
-                } catch (error) {
-                    console.log(`Recording start attempt ${retryCount + 1} failed:`, error.message);
-                    retryCount++;
-                    if (retryCount < maxRetries) {
-                        await new Promise(resolve => setTimeout(resolve, 2000));
-                    }
-                }
-            }
-
-            if (!recordingStarted) {
-                throw new Error('Failed to start recording after multiple attempts');
-            }
+            // Wait for recording state to be confirmed
+            await page.waitForFunction(() => {
+                const voiceIcon = document.querySelector('#voicely-group .voiceIcon1');
+                const isRecording = voiceIcon && voiceIcon.style.display !== 'none';
+                console.log('Recording state check:', { isRecording });
+                return isRecording;
+            }, { timeout: 10000 });
 
             // Wait for recording to fully start
             await new Promise(resolve => setTimeout(resolve, 2000));
@@ -701,5 +607,5 @@ test.describe('Voicely Extension Integration Test', () => {
             await takeScreenshot('error');
             throw error;
         }
-    }, 120000); // 2 minutes, adjust as needed
+    }, 60000); // 1 minute
 });

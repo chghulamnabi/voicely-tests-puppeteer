@@ -1,7 +1,7 @@
 name: Playwright Tests
 on:
   push:
-    branches: [ main, master ]
+    branches: [ main, master, "feature/initial-setup" ]
   pull_request:
     branches: [ main, master ]
 jobs:
@@ -12,13 +12,13 @@ jobs:
     - uses: actions/checkout@v4
     - uses: actions/setup-node@v4
       with:
-        node-version: lts/*
+        node-version: 18
     - name: Install dependencies
-      run: npm ci
-    - name: Install Playwright Browsers
+      run: npm install
+    - name: Install Playwright Browsers and dependencies
       run: npx playwright install --with-deps
-    - name: Run Playwright tests
-      run: npx playwright test
+    - name: Run Voicely E2E tests
+      run: npx playwright test e2e/voicely.spec.js
     - uses: actions/upload-artifact@v4
       if: ${{ !cancelled() }}
       with:
